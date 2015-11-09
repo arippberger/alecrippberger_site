@@ -5,9 +5,97 @@
     <description></description>
     <link>/</link>
     <atom:link href="/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Sun, 08 Nov 2015 21:42:02 -0600</pubDate>
-    <lastBuildDate>Sun, 08 Nov 2015 21:42:02 -0600</lastBuildDate>
+    <pubDate>Sun, 08 Nov 2015 22:54:44 -0600</pubDate>
+    <lastBuildDate>Sun, 08 Nov 2015 22:54:44 -0600</lastBuildDate>
     <generator>Jekyll v3.0.0</generator>
+    
+      <item>
+        <title>Using Multiple SSH Keys with WP Engine&#39;s Git Push Functionality</title>
+        <description>&lt;p&gt;WP Engine has a great feature: the ability to push from your development environment (typically your local environment - VVV or MAMP or whatever) to a site’s staging or production environments using git. You just use git push. Typically I use this for moving local changes to the staging server. It sure beats moving files via PHPStorm’s depolyment sync or manual FTP transfer.&lt;/p&gt;
+
+&lt;p&gt;If you are unfamiliar with this process you can learn more through this &lt;a href=&quot;https://wpengine.com/support/set-git-push-user-portal/&quot;&gt;WP Engine Support Garage article&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;WP Engine provides great instructions on setting up an SSH key so you can use the git push feature, but its instructions focus on using a single SSH key. This may not be advisable from a security perspective (shared keys between different sites/clients), and also look unproffesional in the WP Engine web portal (a shared name between sites/clients). Therefore I thought it would be helpful to share how to configure multiple SSH keys.&lt;/p&gt;
+
+&lt;h2 id=&quot;creating-an-ssh-config-file&quot;&gt;Creating an SSH config file&lt;/h2&gt;
+
+&lt;p&gt;The magic that will allow you to use multiple SSH keys is in the SSH config file. In the config file you can provide an entry for each SSH connection which should use a unique key. The following example will show you how to set up a SSH config file such that running the command&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;ssh your_site_name&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;p&gt;will ssh into git.wpengine.com using a private key stored in ~/.ssh/your_site_name/id_rsa.&lt;/p&gt;
+
+&lt;p&gt;Open terminal and enter:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; ~/.ssh/&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;mkdir your_site_name&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;nano config&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Enter the following into the file:&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;Host your_site_name
+  User git
+  Hostname git.wpengine.com
+  PreferredAuthentications publickey
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/your_site_name/id_rsa&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;press “CONTROL X” to exit&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;generating-an-ssh-key&quot;&gt;Generating an SSH Key&lt;/h2&gt;
+
+&lt;p&gt;Now we have to create the SSH key we pointed to in the config file (IdentityFile). If you already know how to generate an SSH key feel free to skip ahead (just make sure the config file you created points to your private key). Otherwise, pop open terminal and run the following commands:&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;ssh-keygen -t rsa -b 4096 -C &lt;span class=&quot;s2&quot;&gt;&quot;your_email@example.com&quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;save thev key to “~/.ssh/your_site_name/id_rsa”&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nb&quot;&gt;eval&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;$(&lt;/span&gt;ssh-agent -s&lt;span class=&quot;k&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;ssh-add ~/.ssh/your_site_name/id_rsa&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;pbcopy &amp;lt; ~/.ssh/your_site_name/id_rsa.pub&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;h2 id=&quot;configuring-wp-engine&quot;&gt;Configuring WP Engine&lt;/h2&gt;
+
+&lt;p&gt;So far we’ve set up public / private SSH keys and a config file that helps route to them. Now we have to configure WP Engine. You’ll want to be logged in under the account you’d like the SSH key associated with.&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Visit https://my.wpengine.com/installs/your_site_name/git_push (note “your_site_name” in the URL needs to be replaced with your site name)&lt;/li&gt;
+  &lt;li&gt;Provide a developer name&lt;/li&gt;
+  &lt;li&gt;Paste copied public key (~/.ssh/your_site_name/id_rsa.pub)&lt;/li&gt;
+  &lt;li&gt;Test (after 10 minutes) by running the following, making note of the repo names returned for use in next step:&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;ssh your_site_name info&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;&lt;span class=&quot;nb&quot;&gt;cd &lt;/span&gt;your_git_repo_dir&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-bash&quot; data-lang=&quot;bash&quot;&gt;git remote add staging your_site_name:staging/your_site_name.git&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;note that the “your_site_name” before the colon corresponds to the ~/.ssh/config “Host”&lt;/li&gt;
+  &lt;li&gt;note that the “staging/your_site_name” after the colon corresponds to the response from ssh your_site_name info&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Once that’s set up you should be good to push using git as you normally would (for WP Engine).&lt;/p&gt;
+</description>
+        <pubDate>Sun, 08 Nov 2015 00:00:00 -0600</pubDate>
+        <link>/multiple-ssh-keys-wp-engine</link>
+        <guid isPermaLink="true">/multiple-ssh-keys-wp-engine</guid>
+        
+        
+        <category>code</category>
+        
+      </item>
     
       <item>
         <title>Oh, hellow there world.</title>
@@ -16,7 +104,7 @@
 &lt;h2 id=&quot;who-are-you&quot;&gt;Who Are You?&lt;/h2&gt;
 &lt;p&gt;I’m a full-stack web developer with a focus on PHP and WordPress.&lt;/p&gt;
 </description>
-        <pubDate>Mon, 02 Nov 2015 00:00:00 -0600</pubDate>
+        <pubDate>Fri, 06 Nov 2015 00:00:00 -0600</pubDate>
         <link>/hello-world</link>
         <guid isPermaLink="true">/hello-world</guid>
         

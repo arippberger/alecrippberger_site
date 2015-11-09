@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html class="no-js">
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Alec Rippberger | Using Multiple SSH Keys with WP Engine's Git Push Functionality</title>
+    <meta name="description" content="WP Engine has a great feature: the ability to push from your development environment (typically your local environment - VVV or MAMP or whatever) to a site’s...">
+
+    <link rel="stylesheet" href="/css/main.css">
+
+    <link rel="canonical" href="/multiple-ssh-keys-wp-engine">
+    <link rel="alternate" type="application/rss+xml" title="Alec Rippberger" href="/feed.xml" />
+
+    <!--[if lt IE 9]>
+        <script src="/js/vendor/html5shiv.min.js"></script>
+    <![endif]-->
+</head>
+
+
+  <body class="">
+
+    <header class="hero-image" style='background-image: url(/img/feature-wp-bg.jpg);'>
+    <span class="menu-trigger animated fadeInDown">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+    </span>
+
+    <!-- if the user has javascript disabled they can still use the menu -->
+<noscript>
+    <div class="no-js-menu">
+        <ul>
+            
+                <li><i class="fa fa-home"></i><a href="/">Home</a></li>
+            
+                <li><i class="fa fa-anchor"></i><a href="/about">About</a></li>
+            
+                <li><i class="fa fa-plane"></i><a href="/contact">Contact</a></li>
+            
+                <li><i class="fa fa-user"></i><a href="/author/alec">Author</a></li>
+            
+        </ul>
+    </div>
+</noscript>
+<!-- end no script -->
+
+    <div id="menu-target">
+    <ul>
+        
+            <li><i class="fa fa-home"></i><a href="/">Home</a></li>
+        
+            <li><i class="fa fa-anchor"></i><a href="/about">About</a></li>
+        
+            <li><i class="fa fa-plane"></i><a href="/contact">Contact</a></li>
+        
+            <li><i class="fa fa-user"></i><a href="/author/alec">Author</a></li>
+        
+    </ul>
+</div>
+
+</header>
+
+<main class="container">
+    <div class="row">
+        <div class="col-xs-12 col-md-8 single-content-sidebar">
+
+            <h1>Using Multiple SSH Keys with WP Engine's Git Push Functionality</h1>
+
+            <p>WP Engine has a great feature: the ability to push from your development environment (typically your local environment - VVV or MAMP or whatever) to a site’s staging or production environments using git. You just use git push. Typically I use this for moving local changes to the staging server. It sure beats moving files via PHPStorm’s depolyment sync or manual FTP transfer.</p>
+
+<p>If you are unfamiliar with this process you can learn more through this <a href="https://wpengine.com/support/set-git-push-user-portal/">WP Engine Support Garage article</a>.</p>
+
+<p>WP Engine provides great instructions on setting up an SSH key so you can use the git push feature, but its instructions focus on using a single SSH key. This may not be advisable from a security perspective (shared keys between different sites/clients), and also look unproffesional in the WP Engine web portal (a shared name between sites/clients). Therefore I thought it would be helpful to share how to configure multiple SSH keys.</p>
+
+<h2 id="creating-an-ssh-config-file">Creating an SSH config file</h2>
+
+<p>The magic that will allow you to use multiple SSH keys is in the SSH config file. In the config file you can provide an entry for each SSH connection which should use a unique key. The following example will show you how to set up a SSH config file such that running the command</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh your_site_name</code></pre></figure>
+
+<p>will ssh into git.wpengine.com using a private key stored in ~/.ssh/your_site_name/id_rsa.</p>
+
+<p>Open terminal and enter:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nb">cd</span> ~/.ssh/</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">mkdir your_site_name</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">nano config</code></pre></figure>
+
+<ul>
+  <li>Enter the following into the file:</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">Host your_site_name
+  User git
+  Hostname git.wpengine.com
+  PreferredAuthentications publickey
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/your_site_name/id_rsa</code></pre></figure>
+
+<ul>
+  <li>press “CONTROL X” to exit</li>
+</ul>
+
+<h2 id="generating-an-ssh-key">Generating an SSH Key</h2>
+
+<p>Now we have to create the SSH key we pointed to in the config file (IdentityFile). If you already know how to generate an SSH key feel free to skip ahead (just make sure the config file you created points to your private key). Otherwise, pop open terminal and run the following commands:</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh-keygen -t rsa -b 4096 -C <span class="s2">"your_email@example.com"</span></code></pre></figure>
+
+<ul>
+  <li>save thev key to “~/.ssh/your_site_name/id_rsa”</li>
+</ul>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nb">eval</span> <span class="s2">"</span><span class="k">$(</span>ssh-agent -s<span class="k">)</span><span class="s2">"</span></code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh-add ~/.ssh/your_site_name/id_rsa</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">pbcopy &lt; ~/.ssh/your_site_name/id_rsa.pub</code></pre></figure>
+
+<h2 id="configuring-wp-engine">Configuring WP Engine</h2>
+
+<p>So far we’ve set up public / private SSH keys and a config file that helps route to them. Now we have to configure WP Engine. You’ll want to be logged in under the account you’d like the SSH key associated with.</p>
+
+<ol>
+  <li>Visit https://my.wpengine.com/installs/your_site_name/git_push (note “your_site_name” in the URL needs to be replaced with your site name)</li>
+  <li>Provide a developer name</li>
+  <li>Paste copied public key (~/.ssh/your_site_name/id_rsa.pub)</li>
+  <li>Test (after 10 minutes) by running the following, making note of the repo names returned for use in next step:</li>
+</ol>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">ssh your_site_name info</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nb">cd </span>your_git_repo_dir</code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash">git remote add staging your_site_name:staging/your_site_name.git</code></pre></figure>
+
+<ol>
+  <li>note that the “your_site_name” before the colon corresponds to the ~/.ssh/config “Host”</li>
+  <li>note that the “staging/your_site_name” after the colon corresponds to the response from ssh your_site_name info</li>
+</ol>
+
+<p>Once that’s set up you should be good to push using git as you normally would (for WP Engine).</p>
+
+
+        </div><!-- main-content/col -->
+
+        <div class="col-xs-12 col-md-3 col-md-offset-1 single-content-sidebar-area">
+
+            <img src='img/alec-surfing.jpg' class="user-icon " alt="user-image">
+            <div class="meta">
+
+                <div class="sidebar-info">
+                    <a href="/author/alec">Alec rippberger</a> in <a href='category/code'>Code</a>
+                </div>
+
+                <div class="sidebar-readtime">
+                    <i class="fa fa-bookmark"></i> 15 minute read
+                </div>
+
+            </div>
+
+            <h2 class="favorites">Similar Posts</h2>
+
+            
+                
+                <div class="similar-post">
+                    <a href="/hello-world"><h3>Oh, hellow there world.</h3></a>
+                </div>
+                
+            
+        </div>
+
+    </div> <!--/row -->
+
+</main> <!-- /container -->
+
+<footer class="single">
+    <div class="container">
+    <div class="row">
+        <div class="col-xs-12 col-sm-2">
+            <img src="/img/alec-surfing.jpg" class="user-icon " alt="user-image">
+        </div>
+        <div class="col-xs-12 col-sm-6">
+            <div class="category-list">
+                <p>Published <span>Nov 8, 2015</span></p>
+                <p><a href="/author/alec">Alec rippberger</a> in <a href='/category/code'>Code</a></p>
+
+                <div class="other-catergories">
+                    <h3>Also found in</h3>
+
+                    <ul>
+                        
+                        <li>
+                            <a href='/category/code'>Code</a>
+                            
+                        </li>
+                        
+                    </ul>
+                </div>
+
+            </div>
+        </div><!-- end col -->
+        <div class="col-xs-12 col-sm-4">
+            <div class="social">
+                <p>Share this article</a>
+                <div class="social-links">
+                    <a class="social-icon" href="#" data-platform="twitter" data-message="" data-url="/multiple-ssh-keys-wp-engine"><i class="fa fa-twitter"></i></a>
+
+                    <a class="social-icon" href="#" data-platform="facebook" data-message="" data-url="/multiple-ssh-keys-wp-engine"><i class="fa fa-facebook-official"></i></a>
+                    <a class="social-icon" data-platform="mail"  href="mailto:arippberger@gmail.community?body=/multiple-ssh-keys-wp-engine"><i class="fa fa-envelope"></i></a>
+                </div>
+            </div>
+        </div>
+    </div><!-- end row -->
+</div>
+
+    
+</footer>
+
+
+
+    <script src='/js/vendor/modernizr.custom.32229-2.8-respondjs-1-4-2.js'></script>
+    <script src="/js/vendor/jquery-1.11.2.min.js"></script>
+    <script src='/js/vendor/jquery.jpanelmenu.min.js'></script>
+    <script type='application/javascript' src='/js/vendor/fastclick.min.js'></script>
+    
+    <script src=' /js/main.js'></script>
+  </body>
+
+</html>
